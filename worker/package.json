@@ -1,0 +1,29 @@
+{
+  "name": "mastra-interview-worker",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker backend for Mastra Interview Assistant",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "cf:deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^2.0.65",
+    "@mastra/core": "^0.24.0",
+    "ai": "^5.0.92",
+    "graphql": "^16.8.1",
+    "graphql-yoga": "^5.0.0",
+    "pdfjs-dist": "^5.4.394",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241106.0",
+    "@types/node": "^20.10.0",
+    "mastra": "^0.18.0",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.46.0"
+  },
+  "packageManager": "pnpm@8.15.9+sha512.499434c9d8fdd1a2794ebf4552b3b25c0a633abcee5bb15e7b5de90f32f47b513aca98cd5cfd001c31f0db454bc3804edccd578501e4ca293a6816166bbd9f81"
+}

@@ -1,0 +1,18 @@
+type Query {
+  chat(message: String!): ChatResponse!
+}
+
+type Mutation {
+  uploadPDF(file: Upload!): UploadResult!
+}
+
+type ChatResponse {
+  reply: String!
+}
+
+type UploadResult {
+  success: Boolean!
+  message: String
+}
+
+scalar Upload
