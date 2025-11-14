@@ -31,11 +31,39 @@ export const chatResolver = async (
     console.log('Agent retrieved from Mastra successfully');
 
     // 运行 Mastra Agent
+    console.log('🚀 Calling agent.generate with message:', message);
+    console.log('📋 Agent has tools:', Object.keys(agent.tools || {}));
+
     const result = await agent.generate(message);
-    console.log('Agent generate completed, result:', {
+
+    console.log('✅ Agent generate completed');
+    console.log('📊 Result summary:', {
       hasText: !!result.text,
       textLength: result.text?.length,
+      toolCalls: result.toolCalls?.length || 0,
+      toolResults: result.toolResults?.length || 0,
     });
+
+    // 记录工具调用详情
+    if (result.toolCalls && result.toolCalls.length > 0) {
+      console.log('🔧 Tools called:', result.toolCalls.map((tc: any) => tc.toolName || tc.id));
+      console.log('🔧 Tool call details:', JSON.stringify(result.toolCalls, null, 2));
+    } else {
+      console.warn('⚠️ No tools were called by the agent!');
+    }
+
+    if (result.toolResults && result.toolResults.length > 0) {
+      console.log('📦 Tool results count:', result.toolResults.length);
+      result.toolResults.forEach((tr: any, idx: number) => {
+        console.log(`📦 Tool result #${idx + 1}:`, {
+          toolName: tr.toolName,
+          resultType: typeof tr.result,
+          resultPreview: tr.result
+            ? (typeof tr.result === 'string' ? tr.result.substring(0, 200) : JSON.stringify(tr.result).substring(0, 200))
+            : 'undefined',
+        });
+      });
+    }
 
     if (!result || !result.text) {
       console.error('Agent returned invalid result:', result);

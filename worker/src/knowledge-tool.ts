@@ -16,47 +16,57 @@ export function createKnowledgeBaseTool(env: Env) {
           'The search query to find relevant information from the knowledge base'
         ),
     }),
+    outputSchema: z.string().describe('The search results from the knowledge base'),
     execute: async ({ context, ...params }) => {
+      console.log('🔍🔍🔍 Knowledge base tool EXECUTED!');
+
       // 参数可能在 context 或直接在 params 中
       const query = (params as any).query || (context as any)?.query;
 
+      console.log('🔍 Knowledge base search initiated');
+      console.log('   - Query:', query);
+      console.log('   - Params:', JSON.stringify(params));
+      console.log('   - Context keys:', Object.keys(context || {}));
+
       if (!query || typeof query !== 'string') {
-        return {
-          success: false,
-          error: 'Query parameter is required and must be a string.',
-        };
+        console.error('❌ Invalid query parameter');
+        return 'Error: Query parameter is required and must be a string.'; // 直接返回字符串
       }
 
       try {
-        console.log('Searching knowledge base with query:', query);
-        const results = await searchVectorize(env, query, 3);
+        console.log('🔎 Searching knowledge base with query:', query);
+        const results = await searchVectorize(env, query, 5); // 增加到 5 个结果
+        console.log(`📊 Search returned ${results.length} results`);
 
         if (results.length === 0) {
-          return {
-            success: true,
-            data: 'No relevant information found in the knowledge base.',
-          };
+          console.log('⚠️  No results found in knowledge base');
+          const noResultsMessage = 'No relevant information found in the knowledge base.';
+          console.log('🔙 Returning to agent:', noResultsMessage);
+          return noResultsMessage; // 直接返回字符串
         }
 
         // 格式化检索结果
         const formattedResults = results
           .map((result, index) => {
+            console.log(`   Result ${index + 1}: score=${result.score}, text length=${result.text?.length}`);
+            console.log(`   Result ${index + 1} text preview:`, result.text?.substring(0, 100));
             return `[${index + 1}] ${result.text}\n   Source: ${
               result.metadata?.filename || 'Unknown'
-            }`;
+            }\n   Relevance: ${(result.score * 100).toFixed(1)}%`;
           })
           .join('\n\n');
 
-        return {
-          success: true,
-          data: `Found ${results.length} relevant information:\n\n${formattedResults}`,
-        };
+        const responseText = `Found ${results.length} relevant information from resume:\n\n${formattedResults}`;
+        console.log('✅ Knowledge base search successful');
+        console.log('🔙 Returning to agent (length):', responseText.length);
+        console.log('🔙 Response preview:', responseText.substring(0, 200));
+
+        return responseText; // 直接返回字符串，不要包装在对象中
       } catch (error) {
-        console.error('Knowledge base search error:', error);
-        return {
-          success: false,
-          error: 'Error searching the knowledge base.',
-        };
+        console.error('❌ Knowledge base search error:', error);
+        const errorMessage = `Error searching the knowledge base: ${error instanceof Error ? error.message : String(error)}`;
+        console.log('🔙 Returning error to agent:', errorMessage);
+        return errorMessage; // 直接返回错误字符串
       }
     },
   });

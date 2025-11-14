@@ -16,6 +16,7 @@
     "graphql": "^16.8.1",
     "graphql-yoga": "^5.0.0",
     "pdfjs-dist": "^5.4.394",
+    "unpdf": "^1.4.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {

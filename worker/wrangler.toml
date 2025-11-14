@@ -3,29 +3,34 @@ main = "src/index.ts"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat", "nodejs_compat_populate_process_env"]
 
+# R2 存储绑定（可选 - 如果启用 R2，取消下面的注释）
+# 使用前需要在 Cloudflare Dashboard 启用 R2，然后运行：
+#   wrangler r2 bucket create interview-pdfs
+[[r2_buckets]]
+binding = "PDF_BUCKET"
+bucket_name = "interview-pdfs"
+preview_bucket_name = "interview-pdfs-preview"
+
 # Vectorize 绑定
 [[vectorize]]
 binding = "VECTORIZE"
 index_name = "frontend-assistant"
 
+# AI Workers 绑定（用于生成 embeddings）
+[ai]
+binding = "AI"
+
 # 环境变量
 [vars]
 VECTORIZE_INDEX = "frontend-assistant"
 
-# 注意：
-# 1. OPENAI_API_KEY 需要通过以下命令设置：
-#    wrangler secret put OPENAI_API_KEY
-#    或使用环境变量：export OPENAI_API_KEY="sk-xxxx"
-#
-# 2. 创建 Vectorize 索引（首次部署前执行）：
-#    wrangler vectorize create frontend-assistant \
-#      --dimensions=1536 \
-#      --metric=cosine \
-#      --description="Frontend interview assistant knowledge base"
-#
-# 3. 查看 Vectorize 索引列表：
-#    wrangler vectorize list
-#
-# 4. 删除 Vectorize 索引（如果需要）：
-#    wrangler vectorize delete frontend-assistant
+# Durable Objects 配置：用于异步处理 PDF 向量化（免费版可用）
+[[durable_objects.bindings]]
+name = "PDF_PROCESSOR"
+class_name = "PDFProcessor"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["PDFProcessor"]
+
 

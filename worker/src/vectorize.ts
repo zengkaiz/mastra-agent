@@ -43,44 +43,63 @@ export async function generateEmbedding(
   }
 }
 
-// 将文档存储到 Vectorize
+// 将文档存储到 Vectorize（流式处理以避免内存溢出）
 export async function storeInVectorize(
   env: Env,
   textChunks: string[],
   metadata: { filename: string; uploadedAt: string }
 ): Promise<void> {
   try {
-    const vectors = await Promise.all(
-      textChunks.map(async (chunk, index) => {
+    let totalStored = 0;
+
+    // 流式处理：每次只处理一个 chunk，立即存储，避免内存累积
+    // 这样可以在 Durable Object 的内存限制内工作
+    for (let i = 0; i < textChunks.length; i++) {
+      const chunk = textChunks[i];
+
+      try {
+        // 1. 生成 embedding（一次一个，减少内存占用）
+        console.log(`[${i + 1}/${textChunks.length}] Generating embedding...`);
         const embedding = await generateEmbedding(chunk, env.OPENAI_API_KEY);
-        return {
-          id: `${metadata.filename}-chunk-${index}-${Date.now()}`,
+
+        // 2. 立即创建 vector 对象
+        const vector = {
+          id: `${metadata.filename}-chunk-${i}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
           values: embedding,
           metadata: {
             ...metadata,
-            chunkIndex: index,
-            text: chunk.substring(0, 200), // 存储前200字符作为预览
+            chunkIndex: i,
+            text: chunk, // 存储完整文本（Vectorize 支持最多 40KB metadata）
           },
         };
-      })
-    );
 
-    // 批量插入到 Vectorize
-    // 注意：Cloudflare Vectorize API 通过绑定使用，不需要传递 index name
-    const batchSize = 100;
-    for (let i = 0; i < vectors.length; i += batchSize) {
-      const batch = vectors.slice(i, i + batchSize);
-      await env.VECTORIZE.upsert(batch);
+        // 3. 立即存储到 Vectorize（单个），释放内存
+        await env.VECTORIZE.upsert([vector]);
+        totalStored++;
+        console.log(`✓ Stored chunk ${i + 1}/${textChunks.length}`);
+
+        // 4. 释放引用，帮助 GC
+        // @ts-ignore
+        embedding.length = 0;
+      } catch (chunkError: any) {
+        // 在本地开发环境，Vectorize 不可用
+        if (chunkError?.message?.includes('needs to be run remotely')) {
+          console.warn('⚠️  Vectorize is not available in local development. Skipping vector storage.');
+          return;
+        }
+        console.error(`Failed to process chunk ${i}:`, chunkError);
+        throw chunkError;
+      }
     }
 
-    console.log(`Successfully stored ${vectors.length} vectors in Vectorize`);
+    console.log(`✓ Successfully stored ${totalStored} vectors in Vectorize`);
   } catch (error) {
     console.error('Vectorize storage error:', error);
     throw error;
   }
 }
 
-// 从 Vectorize 检索相关文档
+// 从 Vectorize 检索相关文档（使用 Cloudflare AI Workers）
 export async function searchVectorize(
   env: Env,
   query: string,
@@ -89,11 +108,13 @@ export async function searchVectorize(
   Array<{ text: string; score: number; metadata: Record<string, any> }>
 > {
   try {
-    // 生成查询向量
-    const queryEmbedding = await generateEmbedding(query, env.OPENAI_API_KEY);
+    // 使用 Cloudflare AI Workers 生成查询向量
+    const embedding = await env.AI.run('@cf/baai/bge-small-en-v1.5', {
+      text: query,
+    });
+    const queryEmbedding = embedding.data[0];
 
     // 在 Vectorize 中搜索
-    // 注意：Cloudflare Vectorize 的 query 方法通过绑定调用
     const results = await env.VECTORIZE.query(queryEmbedding, {
       topK,
       returnMetadata: true,
@@ -107,7 +128,12 @@ export async function searchVectorize(
       score: result.score || 0,
       metadata: result.metadata || {},
     }));
-  } catch (error) {
+  } catch (error: any) {
+    // 在本地开发环境，Vectorize 不可用
+    if (error?.message?.includes('needs to be run remotely')) {
+      console.warn('⚠️  Vectorize is not available in local development. Returning empty results.');
+      return [];
+    }
     console.error('Vectorize search error:', error);
     return [];
   }

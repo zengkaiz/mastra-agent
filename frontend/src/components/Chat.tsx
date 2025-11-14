@@ -30,7 +30,8 @@ export const Chat: React.FC<ChatProps> = ({ className = '' }) => {
 
   // 处理查询结果
   useEffect(() => {
-    if (result.data && currentQuery) {
+    // 只在查询完成且有当前查询时处理
+    if (!result.fetching && result.data && currentQuery) {
       const assistantMessage: Message = {
         id: Date.now().toString(),
         role: 'assistant',
@@ -40,21 +41,22 @@ export const Chat: React.FC<ChatProps> = ({ className = '' }) => {
       setMessages((prev) => [...prev, assistantMessage]);
       setCurrentQuery(null);
     }
-  }, [result.data, currentQuery]);
+  }, [result.fetching, result.data, currentQuery]);
 
   // 处理错误
   useEffect(() => {
-    if (result.error && currentQuery) {
+    // 只在查询完成且有错误且有当前查询时处理
+    if (!result.fetching && result.error && currentQuery) {
       const errorMessage: Message = {
         id: Date.now().toString(),
         role: 'assistant',
-        content: '抱歉，发生了错误。请稍后重试。',
+        content: `抱歉，发生了错误：${result.error.message}。请稍后重试。`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
       setCurrentQuery(null);
     }
-  }, [result.error, currentQuery]);
+  }, [result.fetching, result.error, currentQuery]);
 
   // 自动滚动到底部
   useEffect(() => {

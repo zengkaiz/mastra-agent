@@ -22,7 +22,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 transition={{ duration: 0.3 }}
                 className="text-xl sm:text-2xl font-bold text-text-primary"
               >
-                面试神器
+                英语面试助手
               </motion.h1>
               <motion.p
                 initial={{ opacity: 0 }}

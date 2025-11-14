@@ -2,20 +2,22 @@ import { Mastra } from '@mastra/core/mastra';
 import { createInterviewAgent } from './agent';
 import { Env } from './types';
 
-// Mastra 实例缓存（按环境）
-let mastraInstance: Mastra | null = null;
-
 // 获取或创建 Mastra 实例
+// 注意：在 Cloudflare Workers 中，为了确保环境变量始终正确传递，
+// 我们每次都创建新的 Agent 实例（Agent 轻量级，性能影响很小）
 export function getMastra(env: Env): Mastra {
-  // 注意：在 Cloudflare Workers 中，每个请求都有独立的执行上下文
-  // 但我们仍然可以缓存实例以提高性能
-  if (!mastraInstance) {
-    const interviewAgent = createInterviewAgent(env);
+  console.log('Creating new Mastra instance with env');
 
-    mastraInstance = new Mastra({
-      agents: { interviewAgent },
-    });
+  // 确保环境变量存在
+  if (!env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY is not configured in environment');
   }
+
+  const interviewAgent = createInterviewAgent(env);
+
+  const mastraInstance = new Mastra({
+    agents: { interviewAgent },
+  });
 
   return mastraInstance;
 }

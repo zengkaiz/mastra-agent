@@ -3,6 +3,16 @@ export interface Env {
   OPENAI_API_KEY: string;
   VECTORIZE_INDEX: string;
   VECTORIZE: VectorizeNamespace;
+  PDF_BUCKET?: R2Bucket; // 可选：如果配置了 R2 才会有
+  PDF_PROCESSOR: DurableObjectNamespace; // Durable Object 用于异步处理 PDF
+  AI: any; // Cloudflare AI Workers binding for embeddings
+}
+
+// PDF 处理任务类型
+export interface PDFProcessTask {
+  r2Key: string;
+  filename: string;
+  uploadedAt: string;
 }
 
 // Cloudflare Vectorize 命名空间类型
